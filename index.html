@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bitácora de Opciones — Pro v7.6.4 (PWA)</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b0c10"/>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Bitácora de Opciones — Pro v7.6.4</h1>
+    <p class="muted">CSV multi-broker (IBKR, Tradier, TOS, Tasty, TradeStation) con <strong>auto delimitador</strong>, <strong>coma decimal</strong>, <strong>parser OCC</strong>, <strong>fechas normalizadas</strong> y <strong>Tester de CSV</strong>. Exportar CSV <em>filtrado</em> + Importar JSON visible.</p>
+    <div class="row gap">
+      <button id="installBtn" class="ghost">Instalar app</button>
+      <span id="installStatus" class="muted"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Nueva posición</h2>
+      <form id="positionForm">
+        <div class="grid">
+          <label><span>Nombre/Resumen</span><input name="title" required /></label>
+          <label><span>Estrategia</span>
+            <select name="strategy">
+              <option value="">(mixta)</option>
+              <option>Covered Call</option>
+              <option>Cash Secured Put</option>
+              <option>Put Credit Spread</option>
+              <option>Call Credit Spread</option>
+              <option>Iron Condor</option>
+              <option>Strangle</option>
+              <option>Straddle</option>
+            </select>
+          </label>
+          <label><span>Fecha de apertura</span><input type="date" name="open_date" /></label>
+          <label><span>Costo base por acción (para CC)</span><input type="number" step="0.01" name="cost_basis" /></label>
+          <label><span>Acciones en posición</span><input type="number" step="1" name="shares" value="0" /></label>
+          <label><span>País fiscal</span>
+            <select name="tax_country">
+              <option>CA</option><option>US</option><option>CO</option><option>MX</option><option>Otro</option>
+            </select>
+          </label>
+          <label><span>Tipo de cuenta</span>
+            <select name="account_type">
+              <option>Cash</option><option>Margin</option><option>TFSA</option><option>RRSP</option><option>Otro</option>
+            </select>
+          </label>
+          <label class="full"><span>Tags (coma)</span><input name="tags" placeholder="CSP, semanal, alta IV" /></label>
+          <label class="full"><span>Notas</span><input name="notes" placeholder="objetivo, plan de manejo, etc." /></label>
+        </div>
+        <div class="row end">
+          <button type="reset" class="ghost">Limpiar</button>
+          <button type="submit">Crear posición</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Agregar pierna a posición</h2>
+      <form id="legForm">
+        <div class="grid">
+          <label><span>Posición</span><select id="positionSelect" name="position_id" required></select></label>
+          <label><span>Ticker</span><input name="ticker" required /></label>
+          <label><span>Tipo</span><select name="option_type" required><option>Call</option><option>Put</option></select></label>
+          <label><span>Acción</span><select name="action" required><option>Venta</option><option>Compra</option></select></label>
+          <label><span>Strike</span><input type="number" step="0.01" name="strike" required /></label>
+          <label><span>Vencimiento</span><input type="date" name="expiry" required /></label>
+          <label><span>Prima/contrato</span><input type="number" step="0.01" name="premium" required /></label>
+          <label><span>Contratos</span><input type="number" step="1" min="1" name="contracts" value="1" required /></label>
+          <label><span>Subyacente</span><input type="number" step="0.01" name="underlying" /></label>
+          <label><span>Fees</span><input type="number" step="0.01" name="fees" value="0" /></label>
+          <label class="full"><span>Notas</span><input name="notes" /></label>
+        </div>
+        <div class="row end"><button type="submit">Agregar pierna</button></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="row between">
+        <h2>Posiciones</h2>
+        <div class="row gap wrap">
+          <input id="search" placeholder="Buscar por título/ticker/notas/tags..." />
+          <select id="statusFilter">
+            <option value="all">Todas</option>
+            <option value="Abierta">Abiertas</option>
+            <option value="Cerrada">Cerradas</option>
+            <option value="Rolled">Rolled</option>
+            <option value="Asignada">Asignadas</option>
+            <option value="Ejercitada">Ejercitadas</option>
+          </select>
+          <input id="tagFilter" placeholder="Tag" />
+          <input id="fromDate" type="date" />
+          <input id="toDate" type="date" />
+          <select id="savedViews"></select>
+          <button id="saveView" class="ghost">Guardar vista</button>
+          <button id="deleteView" class="ghost">Borrar vista</button>
+          <button id="exportCsv">Exportar CSV (todo)</button>
+          <button id="exportCsvFiltered">Exportar CSV (filtrado)</button>
+          <button id="exportXls">Exportar Excel (XLS)</button>
+          <button id="exportXlsFiltered">Exportar Excel (XLS filtrado)</button>
+          <button id="exportXlsx">Exportar XLSX</button>
+          <button id="exportXlsxFiltered">Exportar XLSX (filtrado)</button>
+          <button id="backupJson">Respaldar JSON</button>
+          <label class="importLabel">Importar JSON<input type="file" id="importJson" accept="application/json,.json" hidden /></label>
+          <div class="row gap">
+            <select id="brokerSelect" title="Broker CSV preset">
+              <option value="auto">Auto</option>
+              <option value="ibkr">IBKR</option>
+              <option value="tos">Thinkorswim</option>
+              <option value="tasty">Tastytrade</option>
+              <option value="tradestation">TradeStation</option>
+              <option value="tradier">Tradier (Auto)</option>
+              <option value="tradier_activity">Tradier (Activity CSV)</option>
+              <option value="tradier_statement">Tradier (Statement CSV)</option>
+            </select>
+            <label class="importLabel">Importar CSV (multi/preset)<input type="file" id="importCsv" accept=".csv,text/csv" multiple hidden /></label>
+          </div>
+        </div>
+      </div>
+
+      <div id="positionsContainer" class="stack"></div>
+    </section>
+
+    <section class="card">
+      <h2>Tester de CSV</h2>
+      <div class="grid">
+        <label class="full"><span>Preset</span>
+          <select id="testerPreset">
+            <option value="auto">Auto</option>
+            <option value="ibkr">IBKR</option>
+            <option value="tos">Thinkorswim</option>
+            <option value="tasty">Tastytrade</option>
+            <option value="tradestation">TradeStation</option>
+            <option value="tradier">Tradier (Auto)</option>
+            <option value="tradier_activity">Tradier (Activity CSV)</option>
+            <option value="tradier_statement">Tradier (Statement CSV)</option>
+          </select>
+        </label>
+        <label class="full"><span>Pega aquí 3–10 líneas (incluye cabecera)</span>
+          <textarea id="csvTester" rows="6" placeholder="header1,header2,...&#10;row1col1,row1col2,..."></textarea>
+        </label>
+        <label class="full"><span>O carga un archivo CSV</span>
+          <input type="file" id="testerFile" accept=".csv,text/csv" />
+        </label>
+      </div>
+      <div class="row gap">
+        <button id="testerRun">Probar parseo</button>
+        <button id="testerSample" class="ghost">Ejemplo IBKR (OCC)</button>
+      </div>
+      <div id="testerOut" class="tester"></div>
+    </section>
+
+    <section class="card">
+      <h2>Herramientas</h2>
+      <div class="row gap wrap">
+        <button id="simRoll">Simular rolling</button>
+        <button id="enableAlerts">Configurar alertas de vencimiento</button>
+        <label>Anticipo (horas) <input id="leadHours" type="number" min="1" value="36" style="width:100px"/></label>
+        <button id="autoRoll">Rolling por reglas</button>
+        <span class="muted">Las alertas locales requieren permiso del navegador y funcionan cuando la app está abierta.</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Dashboard</h2>
+      <div class="grid grid-3">
+        <div class="kpi"><div class="kpi-label">P&L neto</div><div id="kpiNetPL" class="kpi-value">—</div></div>
+        <div class="kpi"><div class="kpi-label">Win rate</div><div id="kpiWinRate" class="kpi-value">—</div></div>
+        <div class="kpi"><div class="kpi-label">ROI anualizado (cerradas)</div><div id="kpiAnn" class="kpi-value">—</div></div>
+      </div>
+      <div class="grid grid-3">
+        <div class="kpi"><div class="kpi-label">DTE promedio (abiertas)</div><div id="kpiDteAvg" class="kpi-value">—</div></div>
+        <div class="kpi"><div class="kpi-label">DTE mediana (abiertas)</div><div id="kpiDteMed" class="kpi-value">—</div></div>
+        <div class="kpi"><div class="kpi-label">% con DTE &lt;= 7</div><div id="kpiDteSoon" class="kpi-value">—</div></div>
+      </div>
+      <h3>Por estrategia</h3>
+      <div class="tableWrap">
+        <table id="strategyTable">
+          <thead><tr><th>Estrategia</th><th>Operaciones</th><th>P&L neto</th><th>ROI medio</th><th>ROI anualizado</th><th>Win rate</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3>Curvas</h3>
+      <div class="row gap wrap">
+        <button id="chartEq">Equity (acumulado P&L)</button>
+        <button id="chartCap">Capital comprometido diario</button>
+        <button id="chartPL">P&L por mes</button>
+        <button id="chartByTicker">P&L por ticker</button>
+        <button id="chartPremios">Crédito neto vs Fees</button>
+        <button id="chartROI">ROI por estrategia</button>
+      </div>
+      <canvas id="chartCanvas" width="1100" height="380" style="max-width:100%;"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <small>Datos locales. PWA. KPIs con DTE son informativos. No es asesoría financiera/fiscal.</small>
+  </footer>
+
+  <script src="charts.js" type="module"></script>
+  <script src="pro_v7_6.js" type="module"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+    }
+  </script>
+</body>
+</html>

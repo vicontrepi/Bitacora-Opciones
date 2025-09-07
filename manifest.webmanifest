@@ -1,0 +1,8 @@
+{
+  "name": "Bitácora de Opciones — Pro v7.6.4",
+  "short_name": "Opciones Pro v7.6.4",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10"
+}
